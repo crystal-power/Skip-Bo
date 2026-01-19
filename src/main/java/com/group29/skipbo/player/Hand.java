@@ -41,16 +41,20 @@ public class Hand {
         return cards.size() >= maxSize;
     }
 
-    /** Read-only view (useful for UI/tests) */
+    /**
+     * Read-only view (for UI/tests)
+     */
     public List<Card> getCards() {
         return Collections.unmodifiableList(cards);
     }
 
     public Card get(int index) {
-        return cards.get(index); // throws IndexOutOfBoundsException naturally
+        return cards.get(index); // throws IndexOutOfBoundsException normally
     }
 
-    /** Adds a card to the hand (fails if already full). */
+    /**
+     * Adds a card to the hand (fails if already full).
+     */
     public void add(Card card) {
         if (card == null) {
             throw new IllegalArgumentException("Card cannot be null");
@@ -61,17 +65,23 @@ public class Hand {
         cards.add(card);
     }
 
-    /** Removes and returns the card at a position (for "play card i"). */
+    /**
+     * Removes and returns the card at a position (for "play card i").
+     */
     public Card removeAt(int index) {
         return cards.remove(index);
     }
 
-    /** Removes a specific card instance if present. */
+    /**
+     * Removes a specific card instance if present.
+     */
     public boolean remove(Card card) {
         return cards.remove(card);
     }
 
-    /** Clears the hand (end of game / reset). */
+    /**
+     * Clears the hand (end of game / reset).
+     */
     public void clear() {
         cards.clear();
     }

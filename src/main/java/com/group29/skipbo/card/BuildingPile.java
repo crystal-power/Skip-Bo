@@ -14,7 +14,9 @@ public class BuildingPile {
         return currentValue + 1;
     }
 
-    /** DiscardPile-style: returns null if empty */
+    /**
+     * DiscardPile-style: returns null if empty
+     */
     public Card getTopCard() {
         return cards.peek(); // null if empty
     }

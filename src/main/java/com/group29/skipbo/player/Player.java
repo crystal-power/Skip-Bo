@@ -62,11 +62,10 @@ public class Player {
         }
     }
 
-    // -----------------------
     // Turn action methods
-    // -----------------------
-
-    /** Play a card from the player's hand onto a building pile. */
+    /**
+     * Play a card from the player's hand onto a building pile.
+     */
     public void playFromHand(int handIndex, BuildingPile buildingPile) {
         Objects.requireNonNull(buildingPile, "buildingPile");
 
@@ -80,7 +79,9 @@ public class Player {
         buildingPile.play(card);
     }
 
-    /** Play the top card of the player's stock pile onto a building pile. */
+    /**
+     * Play the top card of the player's stock pile onto a building pile.
+     */
     public void playFromStock(BuildingPile buildingPile) {
         Objects.requireNonNull(buildingPile, "buildingPile");
 
@@ -93,7 +94,9 @@ public class Player {
         buildingPile.play(card);
     }
 
-    /** Play the top card of one of the player's discard piles onto a building pile. */
+    /**
+     * Play the top card of one of the player's discard piles onto a building pile.
+     */
     public void playFromDiscard(int discardPileIndex, BuildingPile buildingPile) {
         Objects.requireNonNull(buildingPile, "buildingPile");
 
@@ -111,7 +114,9 @@ public class Player {
         buildingPile.play(card);
     }
 
-    /** Discard a card from hand onto one of the player's discard piles (usually ends the turn). */
+    /**
+     * Discard a card from hand onto one of the player's discard piles (usually ends the turn).
+     */
     public void discardFromHand(int handIndex, int discardPileIndex) {
         DiscardPile pile = getDiscardPile(discardPileIndex);
         Card card = hand.removeAt(handIndex);
