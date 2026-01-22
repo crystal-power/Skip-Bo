@@ -18,12 +18,11 @@ public class CardRenderer {
 
         String color = getColorCode(card.getColor());
         int num = card.getNumber();
-        String cardStr = String.format("[%d]", num);
 
-        return color + cardStr + ANSI.RESET;
+        return color + "[" + num + "]" + ANSI.RESET;
     }
 
-    // we use this to render with color abbreviation like [5-R]
+    // we use this to render with color and letter like [5-R]
     public static String renderWithLabel(Card card) {
         if (card == null) {
             return "[X]";
@@ -36,12 +35,11 @@ public class CardRenderer {
         String color = getColorCode(card.getColor());
         String label = getColorLabel(card.getColor());
         int num = card.getNumber();
-        String cardStr = String.format("[%d-%s]", num, label);
 
-        return color + cardStr + ANSI.RESET;
+        return color + "[" + num + "-" + label + "]" + ANSI.RESET;
     }
 
-    // get ANSI color code for card color
+    // we use this to get the ansi color for a card
     private static String getColorCode(CardColor cardColor) {
         if (cardColor == CardColor.RED) {
             return ANSI.RED_BOLD;
@@ -54,7 +52,7 @@ public class CardRenderer {
         }
     }
 
-    // get single letter for color
+    // we use this to get a single letter for the color
     private static String getColorLabel(CardColor cardColor) {
         if (cardColor == CardColor.RED) {
             return "R";
@@ -67,7 +65,7 @@ public class CardRenderer {
         }
     }
 
-    // render just the number of a card (no color)
+    // we use this to just get the number without colors
     public static String renderSimple(Card card) {
         if (card == null) {
             return "X";

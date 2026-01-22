@@ -7,7 +7,7 @@ import com.group29.skipbo.player.Player;
 
 import java.util.List;
 
-// we use this class to display the game in the terminal
+// we use this class to display the game in the terminal (View in MVC)
 public class GameView {
 
     // we call this to show the whole game state
@@ -26,7 +26,7 @@ public class GameView {
         displayOtherPlayers(game, currentPlayer);
     }
 
-    // show the 4 building piles
+    // we use this to show the 4 building piles
     private static void displayBuildingPiles(Game game) {
         System.out.println(ANSI.YELLOW + "Building Piles:" + ANSI.RESET);
         System.out.print("  ");
@@ -39,7 +39,7 @@ public class GameView {
         System.out.println();
     }
 
-    // show current players stuff
+    // we use this to show the current players hand, stock, and discards
     private static void displayCurrentPlayer(Player player) {
         System.out.println(ANSI.GREEN_BOLD + "Your Turn: " + player.getName() + ANSI.RESET);
 
@@ -59,8 +59,7 @@ public class GameView {
         if (!player.getStockPile().isEmpty()) {
             Card stockTop = player.getStockPile().peekTop();
             int stockSize = player.getStockPile().size();
-            System.out.print("  Stock: " + CardRenderer.render(stockTop));
-            System.out.println(" (" + stockSize + " cards left)");
+            System.out.println("  Stock: " + CardRenderer.render(stockTop) + " (" + stockSize + " cards left)");
         } else {
             System.out.println("  Stock: (empty)");
         }
@@ -74,34 +73,32 @@ public class GameView {
         System.out.println();
     }
 
-    // show other players basic info
+    // we use this to show other players basic info
     private static void displayOtherPlayers(Game game, Player current) {
         List<Player> players = game.getPlayers();
 
         System.out.println(ANSI.CYAN + "Other Players:" + ANSI.RESET);
         for (Player p : players) {
             if (p.equals(current)) {
-                continue; // skip current player
+                continue;
             }
 
-            System.out.print("  " + p.getName() + ": ");
-            System.out.print("Stock=" + p.getStockPile().size() + " ");
-            System.out.print("Hand=" + p.getHand().size());
-            System.out.println();
+            System.out
+                    .println("  " + p.getName() + ": Stock=" + p.getStockPile().size() + " Hand=" + p.getHand().size());
         }
     }
 
-    // we use this for showing a simple message
+    // we use this to show a message
     public static void displayMessage(String msg) {
         System.out.println(ANSI.YELLOW + msg + ANSI.RESET);
     }
 
-    // show error message
+    // we use this to show an error
     public static void displayError(String error) {
         System.out.println(ANSI.RED_BOLD + "ERROR: " + error + ANSI.RESET);
     }
 
-    // show win message
+    // we use this to show who won
     public static void displayWinner(Player winner) {
         System.out.println();
         System.out.println(ANSI.GREEN_BOLD + "========================================" + ANSI.RESET);
@@ -110,15 +107,15 @@ public class GameView {
         System.out.println();
     }
 
-    // clear screen (works on most terminals)
+    // we use this to clear the screen
     private static void clearScreen() {
-        // just print some newlines, simple approach
+        // just print newlines, simple way to do it
         for (int i = 0; i < 50; i++) {
             System.out.println();
         }
     }
 
-    // we use this to show help for commands
+    // we use this to show available commands
     public static void displayHelp() {
         System.out.println(ANSI.CYAN + "Commands:" + ANSI.RESET);
         System.out.println("  play <from> <to>  - play a card");
