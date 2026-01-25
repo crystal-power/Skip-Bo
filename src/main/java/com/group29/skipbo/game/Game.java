@@ -177,7 +177,15 @@ public class Game {
             throw new IllegalStateException("Game not running");
         }
         this.state = GameState.ROUND_OVER;
-        // TODO: we need to calculate scores based on cards left
+
+        // we calculate scores - winner gets 25 points, others lose 5 per card left
+        addScore(winner, 25);
+        for (Player player : players) {
+            if (player != winner) {
+                int cardsLeft = player.getStockPile().size();
+                addScore(player, -5 * cardsLeft);
+            }
+        }
     }
 
     // we use this to end the game completely
