@@ -34,7 +34,8 @@ public class GameView {
         for (int i = 0; i < Game.NUM_BUILDING_PILES; i++) {
             BuildingPile pile = game.getBuildingPile(i);
             Card top = pile.getTopCard();
-            System.out.print("B" + i + ": " + CardRenderer.render(top) + "  ");
+            System.out.print("B" + i + ": " + CardRenderer.render(top) +
+                    " (built=" + pile.getCurrentValue() + ")  ");
         }
         System.out.println();
     }

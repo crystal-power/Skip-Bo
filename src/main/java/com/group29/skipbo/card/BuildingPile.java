@@ -14,6 +14,10 @@ public class BuildingPile {
         return currentValue + 1;
     }
 
+    public int getCurrentValue() {
+        return currentValue;
+    }
+
     /**
      * DiscardPile-style: returns null if empty
      */
