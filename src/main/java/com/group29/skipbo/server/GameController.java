@@ -393,10 +393,13 @@ public class GameController {
 
     // ===== HELPER METHODS =====
 
-    // we broadcast a message to all game players
+    // we broadcast a message to all game players (skip bots which have null
+    // handlers)
     private void broadcast(String message) {
         for (ClientHandler handler : gamePlayers.values()) {
-            handler.send(message);
+            if (handler != null) {
+                handler.send(message);
+            }
         }
     }
 
