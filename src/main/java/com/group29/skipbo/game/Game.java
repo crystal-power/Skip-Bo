@@ -73,9 +73,24 @@ public class Game {
             throw new IllegalStateException("Need " + MIN_PLAYERS + " players");
         }
 
-        this.drawPile = new Deck();
+        // we create the deck and shuffle it
+        this.drawPile = Deck.createStandardDeck();
 
-        // TODO: we need to deal cards when Player class is done
+        // we figure out how many stock cards each player gets
+        // 2 players = 30 cards, 3-4 players = 20 cards, 5+ players = 15 cards
+        int stockSize = getStockSize(players.size());
+
+        // we deal stock cards to each player
+        for (Player player : players) {
+            for (int i = 0; i < stockSize; i++) {
+                player.getStockPile().addToBottom(drawPile.draw());
+            }
+        }
+
+        // we deal 5 cards to each players hand
+        for (Player player : players) {
+            player.refillHand(drawPile);
+        }
 
         this.state = GameState.IN_PROGRESS;
         this.currentPlayerIndex = 0;
@@ -186,5 +201,17 @@ public class Game {
             }
         }
         return winner;
+    }
+
+    // we use this to figure out how many stock cards per player
+    // based on number of players (skip-bo rules)
+    private int getStockSize(int playerCount) {
+        if (playerCount <= 2) {
+            return 30;
+        } else if (playerCount <= 4) {
+            return 20;
+        } else {
+            return 15;
+        }
     }
 }

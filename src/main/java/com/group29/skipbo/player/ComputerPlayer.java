@@ -1,8 +1,6 @@
 package com.group29.skipbo.player;
 
 import com.group29.skipbo.card.BuildingPile;
-import com.group29.skipbo.card.Card;
-import com.group29.skipbo.card.DiscardPile;
 import com.group29.skipbo.rules.MoveValidator;
 
 import java.util.List;
