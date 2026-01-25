@@ -12,33 +12,61 @@ import java.util.Objects;
 
 /**
  * Central place for checking whether moves are possible/valid.
- * This is a lightweight validator: it checks legality (pile rules, indexes, emptiness).
+ * This is a lightweight validator: it checks legality (pile rules, indexes,
+ * emptiness).
  * Turn/state rules can be handled by RuleChecker or controller.
  */
 public class MoveValidator {
-    // move from a source to a building pile.
-    public record Move(Source source, int sourceIndex, int buildingIndex) {
-        public enum Source { STOCK, HAND, DISCARD }
+
+    // we use this class to represent a move (Java 11 compatible)
+    public static class Move {
+        public enum Source {
+            STOCK, HAND, DISCARD
+        }
+
+        private final Source source;
+        private final int sourceIndex;
+        private final int buildingIndex;
+
+        public Move(Source source, int sourceIndex, int buildingIndex) {
+            this.source = source;
+            this.sourceIndex = sourceIndex;
+            this.buildingIndex = buildingIndex;
+        }
+
+        public Source source() {
+            return source;
+        }
+
+        public int sourceIndex() {
+            return sourceIndex;
+        }
+
+        public int buildingIndex() {
+            return buildingIndex;
+        }
     }
 
-    //check if card can be placed on building pile
+    // check if card can be placed on building pile
     public boolean canPlayCardToBuilding(Card card, BuildingPile buildingPile) {
         return card != null && buildingPile != null && buildingPile.canPlay(card);
     }
 
-   //check if stock can play to building pile
+    // check if stock can play to building pile
     public boolean canPlayFromStock(StockPile stockPile, BuildingPile buildingPile) {
         Objects.requireNonNull(stockPile, "stockPile");
         Objects.requireNonNull(buildingPile, "buildingPile");
-        if (stockPile.isEmpty()) return false;
+        if (stockPile.isEmpty())
+            return false;
         return buildingPile.canPlay(stockPile.peekTop());
     }
 
-    //check if specific hand index can be placed onto this building pile
+    // check if specific hand index can be placed onto this building pile
     public boolean canPlayFromHand(Hand hand, int handIndex, BuildingPile buildingPile) {
         Objects.requireNonNull(hand, "hand");
         Objects.requireNonNull(buildingPile, "buildingPile");
-        if (handIndex < 0 || handIndex >= hand.size()) return false;
+        if (handIndex < 0 || handIndex >= hand.size())
+            return false;
         Card card = hand.get(handIndex);
         return buildingPile.canPlay(card);
     }
@@ -47,10 +75,12 @@ public class MoveValidator {
     public boolean canPlayFromDiscard(List<DiscardPile> discardPiles, int discardIndex, BuildingPile buildingPile) {
         Objects.requireNonNull(discardPiles, "discardPiles");
         Objects.requireNonNull(buildingPile, "buildingPile");
-        if (discardIndex < 0 || discardIndex >= discardPiles.size()) return false;
+        if (discardIndex < 0 || discardIndex >= discardPiles.size())
+            return false;
 
         DiscardPile pile = discardPiles.get(discardIndex);
-        if (pile.isEmpty()) return false;
+        if (pile.isEmpty())
+            return false;
 
         Card top = pile.getTopCard();
         return buildingPile.canPlay(top);
@@ -62,7 +92,8 @@ public class MoveValidator {
         Objects.requireNonNull(buildingPiles, "buildingPiles");
 
         List<Integer> playable = new ArrayList<>();
-        if (stockPile.isEmpty()) return playable;
+        if (stockPile.isEmpty())
+            return playable;
 
         Card stockCard = stockPile.peekTop();
         for (int i = 0; i < buildingPiles.length; i++) {
@@ -79,7 +110,8 @@ public class MoveValidator {
         Objects.requireNonNull(buildingPiles, "buildingPiles");
 
         List<Integer> playable = new ArrayList<>();
-        if (handIndex < 0 || handIndex >= hand.size()) return playable;
+        if (handIndex < 0 || handIndex >= hand.size())
+            return playable;
 
         Card card = hand.get(handIndex);
         for (int i = 0; i < buildingPiles.length; i++) {
@@ -90,16 +122,19 @@ public class MoveValidator {
         return playable;
     }
 
-    //finds all building pile indices where the top discard card can be played
-    public List<Integer> findPlayableFromDiscard(List<DiscardPile> discardPiles, int discardIndex, BuildingPile[] buildingPiles) {
+    // finds all building pile indices where the top discard card can be played
+    public List<Integer> findPlayableFromDiscard(List<DiscardPile> discardPiles, int discardIndex,
+            BuildingPile[] buildingPiles) {
         Objects.requireNonNull(discardPiles, "discardPiles");
         Objects.requireNonNull(buildingPiles, "buildingPiles");
 
         List<Integer> playable = new ArrayList<>();
-        if (discardIndex < 0 || discardIndex >= discardPiles.size()) return playable;
+        if (discardIndex < 0 || discardIndex >= discardPiles.size())
+            return playable;
 
         DiscardPile pile = discardPiles.get(discardIndex);
-        if (pile.isEmpty()) return playable;
+        if (pile.isEmpty())
+            return playable;
 
         Card top = pile.getTopCard();
         for (int i = 0; i < buildingPiles.length; i++) {
@@ -110,16 +145,21 @@ public class MoveValidator {
         return playable;
     }
 
-    //true if there exists any valid play from stock/hand/discard to any building pile
-    public boolean hasAnyValidMove(StockPile stockPile, Hand hand, List<DiscardPile> discards, BuildingPile[] buildingPiles) {
-        if (!findPlayableFromStock(stockPile, buildingPiles).isEmpty()) return true;
+    // true if there exists any valid play from stock/hand/discard to any building
+    // pile
+    public boolean hasAnyValidMove(StockPile stockPile, Hand hand, List<DiscardPile> discards,
+            BuildingPile[] buildingPiles) {
+        if (!findPlayableFromStock(stockPile, buildingPiles).isEmpty())
+            return true;
 
         for (int i = 0; i < hand.size(); i++) {
-            if (!findPlayableFromHand(hand, i, buildingPiles).isEmpty()) return true;
+            if (!findPlayableFromHand(hand, i, buildingPiles).isEmpty())
+                return true;
         }
 
         for (int i = 0; i < discards.size(); i++) {
-            if (!findPlayableFromDiscard(discards, i, buildingPiles).isEmpty()) return true;
+            if (!findPlayableFromDiscard(discards, i, buildingPiles).isEmpty())
+                return true;
         }
 
         return false;
@@ -128,7 +168,8 @@ public class MoveValidator {
     /**
      * Collect all currently possible moves, can be prioritized by caller.
      */
-    public List<Move> allPossibleMoves(StockPile stockPile, Hand hand, List<DiscardPile> discards, BuildingPile[] buildingPiles) {
+    public List<Move> allPossibleMoves(StockPile stockPile, Hand hand, List<DiscardPile> discards,
+            BuildingPile[] buildingPiles) {
         Objects.requireNonNull(stockPile);
         Objects.requireNonNull(hand);
         Objects.requireNonNull(discards);

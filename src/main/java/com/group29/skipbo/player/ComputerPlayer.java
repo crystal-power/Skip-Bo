@@ -3,33 +3,36 @@ package com.group29.skipbo.player;
 import com.group29.skipbo.card.BuildingPile;
 import com.group29.skipbo.card.Card;
 import com.group29.skipbo.card.DiscardPile;
+import com.group29.skipbo.rules.MoveValidator;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-
+// we use this for computer players, extends Player
 public class ComputerPlayer extends Player {
 
     private final Random random;
+    // we use this to check moves
+    private final MoveValidator moveValidator;
 
     public ComputerPlayer(String name, StockPile stockPile) {
         super(name, stockPile);
         this.random = new Random();
+        this.moveValidator = new MoveValidator();
     }
 
-
+    // we use this to create computer player with empty stock pile
     public static ComputerPlayer create(String name) {
         return new ComputerPlayer(name, new StockPile());
     }
 
-
+    // we check if computer won
     public boolean hasWon() {
         return getStockPile().isEmpty();
     }
 
-    // plays a full turn automatically.
-    // returns true if the turn was completed (ended with a discard).
+    // we use this to play a full turn automatically
+    // returns true if turn was completed
     public boolean playTurn(BuildingPile[] buildingPiles) {
         while (playOneCard(buildingPiles)) {
             if (hasWon()) {
@@ -39,11 +42,8 @@ public class ComputerPlayer extends Player {
         return discardRandomCard();
     }
 
-
-     // attempts to play one card from any source (stock, hand, or discard piles).
-     // prioritizes stock pile plays since emptying it wins the game.
-     // returns true if a card was played.
-
+    // we try to play one card from any source
+    // prioritizes stock because emptying it wins
     public boolean playOneCard(BuildingPile[] buildingPiles) {
         if (tryPlayFromStock(buildingPiles)) {
             return true;
@@ -57,15 +57,13 @@ public class ComputerPlayer extends Player {
         return false;
     }
 
-     // tries to play the top card from stock pile onto any building pile.
-     // returns true if successful.
+    // we try to play from stock pile
     private boolean tryPlayFromStock(BuildingPile[] buildingPiles) {
         if (getStockPile().isEmpty()) {
             return false;
         }
 
-        Card stockCard = getStockPile().peekTop();
-        List<Integer> validPiles = findValidBuildingPiles(stockCard, buildingPiles);
+        List<Integer> validPiles = moveValidator.findPlayableFromStock(getStockPile(), buildingPiles);
 
         if (validPiles.isEmpty()) {
             return false;
@@ -76,77 +74,46 @@ public class ComputerPlayer extends Player {
         return true;
     }
 
-     // tries to play any card from hand onto any building pile.
-     // returns true if successful.
+    // we try to play from hand
     private boolean tryPlayFromHand(BuildingPile[] buildingPiles) {
         if (getHand().isEmpty()) {
             return false;
         }
 
-        List<int[]> validMoves = new ArrayList<>();
-
+        // we check each hand card to find valid moves
         for (int handIndex = 0; handIndex < getHand().size(); handIndex++) {
-            Card card = getHand().get(handIndex);
-            List<Integer> validPiles = findValidBuildingPiles(card, buildingPiles);
+            List<Integer> validPiles = moveValidator.findPlayableFromHand(getHand(), handIndex, buildingPiles);
 
-            for (int pileIndex : validPiles) {
-                validMoves.add(new int[]{handIndex, pileIndex});
+            if (!validPiles.isEmpty()) {
+                int pileIndex = validPiles.get(random.nextInt(validPiles.size()));
+                playFromHand(handIndex, buildingPiles[pileIndex]);
+                return true;
             }
         }
-
-        if (validMoves.isEmpty()) {
-            return false;
-        }
-
-        int[] move = validMoves.get(random.nextInt(validMoves.size()));
-        playFromHand(move[0], buildingPiles[move[1]]);
-        return true;
+        return false;
     }
 
-     // tries to play the top card from any discard pile onto any building pile.
-     // returns true if successful.
+    // we try to play from discard piles
     private boolean tryPlayFromDiscard(BuildingPile[] buildingPiles) {
-        List<int[]> validMoves = new ArrayList<>();
-
+        // we check each discard pile
         for (int discardIndex = 0; discardIndex < getDiscardPiles().size(); discardIndex++) {
-            DiscardPile discardPile = getDiscardPile(discardIndex);
-
-            if (discardPile.isEmpty()) {
+            if (getDiscardPile(discardIndex).isEmpty()) {
                 continue;
             }
 
-            Card topCard = discardPile.getTopCard();
-            List<Integer> validPiles = findValidBuildingPiles(topCard, buildingPiles);
+            List<Integer> validPiles = moveValidator.findPlayableFromDiscard(
+                    getDiscardPiles(), discardIndex, buildingPiles);
 
-            for (int pileIndex : validPiles) {
-                validMoves.add(new int[]{discardIndex, pileIndex});
+            if (!validPiles.isEmpty()) {
+                int pileIndex = validPiles.get(random.nextInt(validPiles.size()));
+                playFromDiscard(discardIndex, buildingPiles[pileIndex]);
+                return true;
             }
         }
-
-        if (validMoves.isEmpty()) {
-            return false;
-        }
-
-        int[] move = validMoves.get(random.nextInt(validMoves.size()));
-        playFromDiscard(move[0], buildingPiles[move[1]]);
-        return true;
+        return false;
     }
 
-     // finds all building piles where a card can be legally played.
-    private List<Integer> findValidBuildingPiles(Card card, BuildingPile[] buildingPiles) {
-        List<Integer> valid = new ArrayList<>();
-
-        for (int i = 0; i < buildingPiles.length; i++) {
-            if (buildingPiles[i].canPlay(card)) {
-                valid.add(i);
-            }
-        }
-
-        return valid;
-    }
-
-     // discards a random card from hand to a random discard pile.
-     // returns true if successful, false if hand is empty.
+    // we discard a random card to end turn
     private boolean discardRandomCard() {
         if (getHand().isEmpty()) {
             return false;
@@ -159,33 +126,9 @@ public class ComputerPlayer extends Player {
         return true;
     }
 
-     // checks if the computer has any valid move available.
+    // we check if computer has any valid move
     public boolean hasAnyValidMove(BuildingPile[] buildingPiles) {
-        if (!getStockPile().isEmpty()) {
-            Card stockCard = getStockPile().peekTop();
-            if (!findValidBuildingPiles(stockCard, buildingPiles).isEmpty()) {
-                return true;
-            }
-        }
-
-        for (int i = 0; i < getHand().size(); i++) {
-            Card card = getHand().get(i);
-            if (!findValidBuildingPiles(card, buildingPiles).isEmpty()) {
-                return true;
-            }
-        }
-
-        for (int i = 0; i < getDiscardPiles().size(); i++) {
-            DiscardPile pile = getDiscardPile(i);
-            if (!pile.isEmpty()) {
-                Card topCard = pile.getTopCard();
-                if (!findValidBuildingPiles(topCard, buildingPiles).isEmpty()) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return moveValidator.hasAnyValidMove(getStockPile(), getHand(), getDiscardPiles(), buildingPiles);
     }
 
     @Override
