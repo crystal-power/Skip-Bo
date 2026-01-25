@@ -10,6 +10,7 @@ import java.net.ProtocolException;
 import java.util.Locale;
 import java.util.Scanner;
 
+// we use this for connecting to the tournament server
 public class TournamentMain {
 
     public static void main(String[] args) throws IOException {
@@ -42,7 +43,6 @@ public class TournamentMain {
                         // simple auto-resync strategy
                         if (msg.command().equals("PLAY")) {
                             client.send(new Table());
-                            // requesting to be safe
                             client.send(new protocol.client.Hand());
                         }
                         if (msg.command().equals("ERROR")) {
@@ -66,41 +66,44 @@ public class TournamentMain {
             Scanner sc = new Scanner(System.in);
             while (true) {
                 System.out.print("> ");
-                if (!sc.hasNextLine()) break;
+                if (!sc.hasNextLine())
+                    break;
                 String line = sc.nextLine().trim();
-                if (line.isEmpty()) continue;
+                if (line.isEmpty())
+                    continue;
 
                 String[] parts = line.split("\\s+");
                 String cmd = parts[0].toLowerCase(Locale.ROOT);
 
                 try {
-                    switch (cmd) {
-                        case "quit", "exit" -> { return; }
-                        case "help" -> printHelp();
-                        case "state" -> printState(state);
-
-                        case "game" -> {
-                            int n = Integer.parseInt(parts[1]);
-                            client.send(new Game(n));
+                    if (cmd.equals("quit") || cmd.equals("exit")) {
+                        return;
+                    } else if (cmd.equals("help")) {
+                        printHelp();
+                    } else if (cmd.equals("state")) {
+                        printState(state);
+                    } else if (cmd.equals("game")) {
+                        int n = Integer.parseInt(parts[1]);
+                        client.send(new Game(n));
+                    } else if (cmd.equals("hand")) {
+                        client.send(new protocol.client.Hand());
+                    } else if (cmd.equals("table")) {
+                        client.send(new Table());
+                    } else if (cmd.equals("end")) {
+                        if (!state.isYourTurn()) {
+                            System.out.println("Not your turn (TURN=" + state.currentTurnPlayer + ")");
+                        } else {
+                            client.send(new End());
                         }
-                        case "hand" -> client.send(new protocol.client.Hand());
-                        case "table" -> client.send(new Table());
-                        case "end" -> {
-                            if (!state.isYourTurn()) {
-                                System.out.println("Not your turn (TURN=" + state.currentTurnPlayer + ")");
-                            } else {
-                                client.send(new End());
-                            }
-                        }
-                        case "play" -> {
-                            if (!state.isYourTurn()) {
-                                System.out.println("Not your turn (TURN=" + state.currentTurnPlayer + ")");
-                                break;
-                            }
+                    } else if (cmd.equals("play")) {
+                        if (!state.isYourTurn()) {
+                            System.out.println("Not your turn (TURN=" + state.currentTurnPlayer + ")");
+                        } else {
                             Play play = parsePlay(parts);
                             client.send(play);
                         }
-                        default -> System.out.println("Unknown command. Type 'help'.");
+                    } else {
+                        System.out.println("Unknown command. Type 'help'.");
                     }
                 } catch (Exception e) {
                     System.out.println("Command error: " + e.getMessage());
@@ -110,20 +113,18 @@ public class TournamentMain {
     }
 
     private static void printHelp() {
-        System.out.println("""
-                Commands:
-                  game N              (2..6)
-                  hand
-                  table
-                  state               (prints current cached state)
-                  end
-                  play s b0
-                  play h 8 b2
-                  play h sb b1
-                  play d2 b3
-                  help
-                  quit
-                """);
+        System.out.println("Commands:");
+        System.out.println("  game N              (2..6)");
+        System.out.println("  hand");
+        System.out.println("  table");
+        System.out.println("  state               (prints current cached state)");
+        System.out.println("  end");
+        System.out.println("  play s b0");
+        System.out.println("  play h 8 b2");
+        System.out.println("  play h sb b1");
+        System.out.println("  play d2 b3");
+        System.out.println("  help");
+        System.out.println("  quit");
     }
 
     private static void printState(ClientState s) {
@@ -133,35 +134,33 @@ public class TournamentMain {
         System.out.println("Hand: " + s.hand);
         System.out.println("Building tops: B0=" + s.buildingTops[0] + " B1=" + s.buildingTops[1] +
                 " B2=" + s.buildingTops[2] + " B3=" + s.buildingTops[3]);
-        for (var entry : s.tablePlayers.entrySet()) {
+        for (java.util.Map.Entry<String, ClientState.PlayerView> entry : s.tablePlayers.entrySet()) {
             String p = entry.getKey();
-            var pv = entry.getValue();
+            ClientState.PlayerView pv = entry.getValue();
             System.out.println(" - " + p + " stock=" + pv.stockTop +
-                    " discards=[" + pv.discards[0] + "," + pv.discards[1] + "," + pv.discards[2] + "," + pv.discards[3] + "]");
+                    " discards=[" + pv.discards[0] + "," + pv.discards[1] + "," + pv.discards[2] + "," + pv.discards[3]
+                    + "]");
         }
     }
 
     private static Feature[] parseFeatures(String letters) {
         letters = letters == null ? "" : letters.trim().toUpperCase(Locale.ROOT);
-        // include just supported ones, order doesnt matter because Hello sorts
         java.util.ArrayList<Feature> list = new java.util.ArrayList<>();
         for (char c : letters.toCharArray()) {
-            if (c == 'C') list.add(Feature.CHAT);
-            if (c == 'L') list.add(Feature.LOBBY);
-            if (c == 'M') list.add(Feature.MASTER);
+            if (c == 'C')
+                list.add(Feature.CHAT);
+            if (c == 'L')
+                list.add(Feature.LOBBY);
+            if (c == 'M')
+                list.add(Feature.MASTER);
         }
         return list.toArray(new Feature[0]);
     }
 
     private static Play parsePlay(String[] parts) throws ProtocolException {
         // play <from> <to>
-        // from:
-        //   s
-        //   h <token>(token: 1..12 or sb)
-        //   d<idx>(like d2)
-        // to:
-        //   b<idx>(like b0)
-        if (parts.length < 3) throw new IllegalArgumentException("Usage: play <from> <to> OR play h <card> <to>");
+        if (parts.length < 3)
+            throw new IllegalArgumentException("Usage: play <from> <to> OR play h <card> <to>");
 
         int i = 1;
 
@@ -172,7 +171,8 @@ public class TournamentMain {
             from = PositionFactory.stock();
             i++;
         } else if (fromToken.equals("h")) {
-            if (parts.length < 4) throw new IllegalArgumentException("Usage: play h <card> <to>");
+            if (parts.length < 4)
+                throw new IllegalArgumentException("Usage: play h <card> <to>");
             String cardToken = parts[i + 1];
             from = PositionFactory.handToken(cardToken);
             i += 2;
@@ -185,7 +185,8 @@ public class TournamentMain {
         }
 
         String toToken = parts[i].toLowerCase(Locale.ROOT);
-        if (!toToken.startsWith("b")) throw new IllegalArgumentException("TO must be b0..b3");
+        if (!toToken.startsWith("b"))
+            throw new IllegalArgumentException("TO must be b0..b3");
         int bIdx = Integer.parseInt(toToken.substring(1));
         Position to = PositionFactory.building(bIdx);
 

@@ -1,10 +1,9 @@
 package com.group29.skipbo.net;
 
-import protocol.common.ErrorCode;
-
 import java.util.Arrays;
 import java.util.List;
 
+// we use this to handle messages from the server
 public class ServerMessageHandler {
 
     private final ClientState state;
@@ -14,54 +13,51 @@ public class ServerMessageHandler {
     }
 
     public void handle(ServerMessage msg) {
-        switch (msg.command()) {
-            case "WELCOME" -> {
-                System.out.println("[SERVER] " + msg.raw());
+        String cmd = msg.command();
+
+        if (cmd.equals("WELCOME")) {
+            System.out.println("[SERVER] " + msg.raw());
+        } else if (cmd.equals("QUEUE")) {
+            System.out.println("[SERVER] QUEUE (waiting for players)");
+        } else if (cmd.equals("START")) {
+            List<String> players = Arrays.asList(msg.args()[0].split(","));
+            state.players = players;
+            for (String p : players) {
+                state.tablePlayers.putIfAbsent(p, new ClientState.PlayerView());
             }
-            case "QUEUE" -> System.out.println("[SERVER] QUEUE (waiting for players)");
-            case "START" -> {
-                List<String> players = Arrays.asList(msg.args()[0].split(","));
-                state.players = players;
-                players.forEach(p -> state.tablePlayers.putIfAbsent(p, new ClientState.PlayerView()));
-                System.out.println("[SERVER] START players=" + state.players);
-            }
-            case "TURN" -> {
-                state.currentTurnPlayer = msg.args()[0];
-                System.out.println("[SERVER] TURN " + state.currentTurnPlayer +
-                        (state.isYourTurn() ? " (YOUR TURN)" : ""));
-            }
-            case "HAND" -> {
-                state.hand = Arrays.asList(msg.args()[0].split(","));
-                System.out.println("[SERVER] HAND " + state.hand);
-            }
-            case "STOCK" -> {
-                String player = msg.args()[0];
-                String top = msg.args()[1];
-                state.tablePlayers.putIfAbsent(player, new ClientState.PlayerView());
-                state.tablePlayers.get(player).stockTop = top;
-                System.out.println("[SERVER] STOCK " + player + "=" + top);
-            }
-            case "TABLE" -> {
-                parseTable(msg.args());
-                System.out.println("[SERVER] TABLE updated");
-            }
-            case "PLAY" -> {
-                // PLAY~PLAYER~FROM~TO
-                System.out.println("[SERVER] " + msg.raw());
-            }
-            case "ERROR" -> {
-                // ERROR~code
-                String code = msg.args()[0];
-                ErrorCode e = decodeError(code);
-                System.out.println("[SERVER] ERROR " + code + (e != null ? " (" + e + ")" : ""));
-            }
-            case "ROUND", "WINNER" -> System.out.println("[SERVER] " + msg.raw());
-            default -> System.out.println("[SERVER] " + msg.raw());
+            System.out.println("[SERVER] START players=" + state.players);
+        } else if (cmd.equals("TURN")) {
+            state.currentTurnPlayer = msg.args()[0];
+            System.out.println("[SERVER] TURN " + state.currentTurnPlayer +
+                    (state.isYourTurn() ? " (YOUR TURN)" : ""));
+        } else if (cmd.equals("HAND")) {
+            state.hand = Arrays.asList(msg.args()[0].split(","));
+            System.out.println("[SERVER] HAND " + state.hand);
+        } else if (cmd.equals("STOCK")) {
+            String player = msg.args()[0];
+            String top = msg.args()[1];
+            state.tablePlayers.putIfAbsent(player, new ClientState.PlayerView());
+            state.tablePlayers.get(player).stockTop = top;
+            System.out.println("[SERVER] STOCK " + player + "=" + top);
+        } else if (cmd.equals("TABLE")) {
+            parseTable(msg.args());
+            System.out.println("[SERVER] TABLE updated");
+        } else if (cmd.equals("PLAY")) {
+            System.out.println("[SERVER] " + msg.raw());
+        } else if (cmd.equals("ERROR")) {
+            String code = msg.args()[0];
+            String errorName = decodeError(code);
+            System.out.println("[SERVER] ERROR " + code + (errorName != null ? " (" + errorName + ")" : ""));
+        } else if (cmd.equals("ROUND") || cmd.equals("WINNER")) {
+            System.out.println("[SERVER] " + msg.raw());
+        } else {
+            System.out.println("[SERVER] " + msg.raw());
         }
     }
 
     private void parseTable(String[] args) {
-        if (args.length < 1) return;
+        if (args.length < 1)
+            return;
 
         // args[0]: building tops "X.SB4.X.2"
         String[] b = args[0].split("\\.");
@@ -69,13 +65,15 @@ public class ServerMessageHandler {
             state.buildingTops[i] = (i < b.length ? b[i] : "X");
         }
 
-        if (args.length < 2) return;
+        if (args.length < 2)
+            return;
 
         // args[1]: players "LEON.X.12.3.1,WALLACE.3.6.4.10"
         String[] players = args[1].split(",");
         for (String pinfo : players) {
             String[] parts = pinfo.split("\\.");
-            if (parts.length < 5) continue;
+            if (parts.length < 5)
+                continue;
 
             String name = parts[0];
             state.tablePlayers.putIfAbsent(name, new ClientState.PlayerView());
@@ -89,10 +87,19 @@ public class ServerMessageHandler {
         }
     }
 
-    private ErrorCode decodeError(String code) {
-        for (ErrorCode e : ErrorCode.values()) {
-            if (e.getCode().equals(code)) return e;
-        }
+    // we decode error codes - simple version without external dependency
+    private String decodeError(String code) {
+        // common error codes based on protocol
+        if (code.equals("E001"))
+            return "INVALID_MOVE";
+        if (code.equals("E002"))
+            return "NOT_YOUR_TURN";
+        if (code.equals("E003"))
+            return "GAME_NOT_STARTED";
+        if (code.equals("E004"))
+            return "INVALID_CARD";
+        if (code.equals("E005"))
+            return "INVALID_PILE";
         return null;
     }
 }
