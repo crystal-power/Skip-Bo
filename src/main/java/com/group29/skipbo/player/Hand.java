@@ -9,7 +9,6 @@ import java.util.List;
 public class Hand {
 
     public static final int DEFAULT_MAX_SIZE = 5;
-
     private final int maxSize;
     private final List<Card> cards;
 
