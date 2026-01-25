@@ -47,6 +47,8 @@ public class CardRenderer {
             return ANSI.GREEN_BOLD;
         } else if (cardColor == CardColor.BLUE) {
             return ANSI.BLUE_BOLD;
+        } else if (cardColor == CardColor.YELLOW) {
+            return ANSI.YELLOW_BOLD;
         } else {
             return ANSI.PURPLE_BOLD;
         }
@@ -60,6 +62,8 @@ public class CardRenderer {
             return "G";
         } else if (cardColor == CardColor.BLUE) {
             return "B";
+        } else if (cardColor == CardColor.YELLOW) {
+            return "Y";
         } else {
             return "SB";
         }
