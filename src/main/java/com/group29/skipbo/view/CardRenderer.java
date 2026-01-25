@@ -17,9 +17,11 @@ public class CardRenderer {
         }
 
         String color = getColorCode(card.getColor());
+        String label = getColorLabel(card.getColor());
         int num = card.getNumber();
 
-        return color + "[" + num + "]" + ANSI.RESET;
+        // we show [5-R] format so color is visible even without ANSI support
+        return color + "[" + num + "-" + label + "]" + ANSI.RESET;
     }
 
     // we use this to render with color and letter like [5-R]
