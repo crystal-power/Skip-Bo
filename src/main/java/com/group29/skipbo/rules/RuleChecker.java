@@ -24,7 +24,7 @@ public class RuleChecker {
     // checks if the game is currently in progress.
     public boolean isGameInProgress(Game game) {
         Objects.requireNonNull(game, "game");
-        return game.getState() != GameState.IN_PROGRESS;
+        return game.getState() == GameState.IN_PROGRESS;
     }
 
 
