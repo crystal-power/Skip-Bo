@@ -335,12 +335,27 @@ public class GameController {
         return sb.toString();
     }
 
-    // we format a card as a string
+    // we format a card as a string with color label
     private String formatCard(Card card) {
         if (card == null)
             return "X";
         if (card.isSkipBo())
             return "SB";
-        return String.valueOf(card.getNumber());
+        // show color label so client knows the color
+        String colorLabel = getColorLabel(card.getColor());
+        return card.getNumber() + "-" + colorLabel;
+    }
+
+    // we get a single letter for the color
+    private String getColorLabel(com.group29.skipbo.card.CardColor color) {
+        if (color == com.group29.skipbo.card.CardColor.RED)
+            return "R";
+        if (color == com.group29.skipbo.card.CardColor.GREEN)
+            return "G";
+        if (color == com.group29.skipbo.card.CardColor.BLUE)
+            return "B";
+        if (color == com.group29.skipbo.card.CardColor.YELLOW)
+            return "Y";
+        return "?";
     }
 }

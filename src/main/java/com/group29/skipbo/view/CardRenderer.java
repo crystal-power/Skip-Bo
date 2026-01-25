@@ -71,7 +71,7 @@ public class CardRenderer {
         }
     }
 
-    // we use this to just get the number without colors
+    // we use this to get text without ANSI colors but still show color label
     public static String renderSimple(Card card) {
         if (card == null) {
             return "X";
@@ -79,6 +79,7 @@ public class CardRenderer {
         if (card.isSkipBo()) {
             return "SB";
         }
-        return String.valueOf(card.getNumber());
+        String label = getColorLabel(card.getColor());
+        return card.getNumber() + "-" + label;
     }
 }
