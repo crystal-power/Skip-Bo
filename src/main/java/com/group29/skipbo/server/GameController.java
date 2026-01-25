@@ -5,6 +5,7 @@ import com.group29.skipbo.card.Card;
 import com.group29.skipbo.card.DiscardPile;
 import com.group29.skipbo.game.Game;
 import com.group29.skipbo.game.GameState;
+import com.group29.skipbo.player.ComputerPlayer;
 import com.group29.skipbo.player.HumanPlayer;
 import com.group29.skipbo.player.Player;
 
@@ -25,11 +26,13 @@ public class GameController {
     private Game game;
     private final Map<String, ClientHandler> gamePlayers;
     private final Map<String, Player> playerObjects;
+    private final List<String> botNames;
 
     public GameController() {
         this.waitingPlayers = new HashMap<>();
         this.gamePlayers = new HashMap<>();
         this.playerObjects = new HashMap<>();
+        this.botNames = new ArrayList<>();
         this.requestedPlayerCount = 0;
         this.game = null;
     }
@@ -52,6 +55,31 @@ public class GameController {
         gamePlayers.remove(name);
         playerObjects.remove(name);
         // we could handle mid-game disconnection here
+    }
+
+    // ===== BOT SUPPORT =====
+
+    private int botCounter = 0;
+
+    // we add a computer player to the waiting list
+    public synchronized String addBot() {
+        if (game != null && game.getState() == GameState.IN_PROGRESS) {
+            return "205"; // game already running
+        }
+
+        botCounter++;
+        String botName = "Bot" + botCounter;
+
+        // we register the bot with a null handler (bots don't have network connections)
+        waitingPlayers.put(botName, null);
+        ServerView.log("Bot added: " + botName);
+
+        // we check if we can start the game now
+        if (requestedPlayerCount > 0 && waitingPlayers.size() >= requestedPlayerCount) {
+            startGame();
+        }
+
+        return null;
     }
 
     // ===== GAME REQUEST =====
@@ -98,13 +126,21 @@ public class GameController {
             String name = entry.getKey();
             ClientHandler handler = entry.getValue();
 
-            // we create a player object
-            Player player = HumanPlayer.create(name);
+            // we create the right player type based on whether it's a bot
+            Player player;
+            if (handler == null) {
+                // this is a bot
+                player = ComputerPlayer.create(name);
+                botNames.add(name);
+            } else {
+                player = HumanPlayer.create(name);
+            }
             game.addPlayer(player);
             playerObjects.put(name, player);
             gamePlayers.put(name, handler);
             playerNames.add(name);
             count++;
+            ;
         }
 
         // we clear waiting list
@@ -130,6 +166,66 @@ public class GameController {
         String currentPlayer = game.getCurrentPlayer().getName();
         broadcast("TURN~" + currentPlayer);
         ServerView.logTurn(currentPlayer);
+
+        // if current player is a bot, trigger auto-play
+        triggerBotTurnIfNeeded();
+    }
+
+    // we check if current player is a bot and play their turn
+    private void triggerBotTurnIfNeeded() {
+        if (game == null || game.getState() != GameState.IN_PROGRESS)
+            return;
+
+        String currentName = game.getCurrentPlayer().getName();
+        if (botNames.contains(currentName)) {
+            // run bot turn in a separate thread to avoid blocking
+            new Thread(() -> playBotTurn(currentName)).start();
+        }
+    }
+
+    // we play a bot's turn automatically
+    private synchronized void playBotTurn(String botName) {
+        try {
+            Thread.sleep(500); // small delay so humans can see
+        } catch (InterruptedException e) {
+            return;
+        }
+
+        if (game == null || game.getState() != GameState.IN_PROGRESS)
+            return;
+        if (!game.getCurrentPlayer().getName().equals(botName))
+            return;
+
+        Player player = playerObjects.get(botName);
+        if (!(player instanceof ComputerPlayer))
+            return;
+
+        ComputerPlayer bot = (ComputerPlayer) player;
+
+        // bot plays cards until it can't
+        boolean played = bot.playTurn(game.getBuildingPiles());
+
+        // check for winner
+        if (bot.getStockPile().isEmpty()) {
+            game.endRound(bot);
+            broadcast("WINNER~" + botName);
+            ServerView.logWinner(botName);
+            return;
+        }
+
+        // refill hand if needed
+        if (!game.getDrawPile().isEmpty()) {
+            bot.refillHand(game.getDrawPile());
+        }
+
+        // move to next player
+        game.nextTurn();
+        String nextPlayer = game.getCurrentPlayer().getName();
+        broadcast("TURN~" + nextPlayer);
+        ServerView.logTurn(nextPlayer);
+
+        // trigger next bot if needed
+        triggerBotTurnIfNeeded();
     }
 
     // ===== GAME QUERIES =====

@@ -69,9 +69,26 @@ public class ClientHandler implements Runnable {
             case "END":
                 handleEnd();
                 break;
+            case "ADDBOT":
+                handleAddBot();
+                break;
             default:
                 sendError("204"); // INVALID_COMMAND
                 break;
+        }
+    }
+
+    // ADDBOT - client wants to add a computer player
+    private void handleAddBot() {
+        if (playerName == null) {
+            sendError("205");
+            return;
+        }
+        String result = gameController.addBot();
+        if (result != null) {
+            sendError(result);
+        } else {
+            send("BOT_ADDED");
         }
     }
 
