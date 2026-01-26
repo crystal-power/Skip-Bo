@@ -186,7 +186,7 @@ public class GameController {
     // we play a bot's turn automatically
     private synchronized void playBotTurn(String botName) {
         try {
-            Thread.sleep(500); // small delay so humans can see
+            Thread.sleep(500);
         } catch (InterruptedException e) {
             return;
         }
@@ -202,29 +202,114 @@ public class GameController {
 
         ComputerPlayer bot = (ComputerPlayer) player;
 
-        // bot plays cards until it can't
-        boolean played = bot.playTurn(game.getBuildingPiles());
+        // Bot plays cards until it can't
+        // We need to track plays manually to broadcast them
+        boolean keepPlaying = true;
+        while (keepPlaying) {
+            keepPlaying = false;
 
-        // check for winner
-        if (bot.getStockPile().isEmpty()) {
-            game.endRound(bot);
-            broadcast("WINNER~" + botName);
-            ServerView.logWinner(botName);
-            return;
+            // Try to play from stock first
+            for (int i = 0; i < game.getBuildingPiles().length; i++) {
+                BuildingPile pile = game.getBuildingPile(i);
+                if (!bot.getStockPile().isEmpty() && pile.canPlay(bot.getStockPile().peekTop())) {
+                    Card card = bot.getStockPile().peekTop();
+                    bot.playFromStock(pile);
+
+                    // Broadcast the play
+                    int newValue = pile.getCurrentValue();
+                    broadcast("PLAY~" + botName + "~S~B." + i + "~" + newValue);
+                    ServerView.logMove(botName, "S", "B." + i);
+
+                    keepPlaying = true;
+                    break;
+                }
+            }
+
+            // If didn't play from stock, try hand
+            if (!keepPlaying) {
+                for (int h = 0; h < bot.getHand().size(); h++) {
+                    Card card = bot.getHand().get(h);
+                    for (int i = 0; i < game.getBuildingPiles().length; i++) {
+                        BuildingPile pile = game.getBuildingPile(i);
+                        if (pile.canPlay(card)) {
+                            bot.playFromHand(h, pile);
+
+                            // Broadcast the play
+                            int newValue = pile.getCurrentValue();
+                            broadcast("PLAY~" + botName + "~H." + h + "~B." + i + "~" + newValue);
+                            ServerView.logMove(botName, "H." + h, "B." + i);
+
+                            keepPlaying = true;
+                            break;
+                        }
+                    }
+                    if (keepPlaying) break;
+                }
+            }
+
+            // If didn't play from hand, try discard piles
+            if (!keepPlaying) {
+                for (int d = 0; d < bot.getDiscardPiles().size(); d++) {
+                    if (bot.getDiscardPile(d).isEmpty()) continue;
+                    Card card = bot.getDiscardPile(d).getTopCard();
+                    for (int i = 0; i < game.getBuildingPiles().length; i++) {
+                        BuildingPile pile = game.getBuildingPile(i);
+                        if (pile.canPlay(card)) {
+                            bot.playFromDiscard(d, pile);
+
+                            // Broadcast the play
+                            int newValue = pile.getCurrentValue();
+                            broadcast("PLAY~" + botName + "~D." + d + "~B." + i + "~" + newValue);
+                            ServerView.logMove(botName, "D." + d, "B." + i);
+
+                            keepPlaying = true;
+                            break;
+                        }
+                    }
+                    if (keepPlaying) break;
+                }
+            }
+
+            // Check for winner after each play
+            if (keepPlaying && bot.getStockPile().isEmpty()) {
+                game.endRound(bot);
+                broadcast("WINNER~" + botName);
+                ServerView.logWinner(botName);
+                return;
+            }
+
+            // Refill hand if empty
+            if (keepPlaying && bot.getHand().isEmpty() && !game.getDrawPile().isEmpty()) {
+                bot.refillHand(game.getDrawPile());
+            }
         }
 
-        // refill hand if needed
-        if (!game.getDrawPile().isEmpty()) {
-            bot.refillHand(game.getDrawPile());
+        // Bot must discard to end turn
+        if (!bot.getHand().isEmpty()) {
+            int handIndex = (int) (Math.random() * bot.getHand().size());
+            int discardIndex = (int) (Math.random() * 4);
+
+            Card card = bot.getHand().removeAt(handIndex);
+            bot.getDiscardPile(discardIndex).discard(card);
+
+            // Broadcast the discard
+            broadcast("DISCARD~" + botName + "~" + formatCard(card) + "~" + discardIndex);
         }
 
-        // move to next player
+        // Move to next player
         game.nextTurn();
-        String nextPlayer = game.getCurrentPlayer().getName();
-        broadcast("TURN~" + nextPlayer);
-        ServerView.logTurn(nextPlayer);
 
-        // trigger next bot if needed
+        Player nextPlayer = game.getCurrentPlayer();
+        if (!game.getDrawPile().isEmpty()) {
+            nextPlayer.refillHand(game.getDrawPile());
+        }
+
+        String nextPlayerName = nextPlayer.getName();
+        broadcast("TURN~" + nextPlayerName);
+        ServerView.logTurn(nextPlayerName);
+
+        sendPlayerHand(nextPlayerName);
+
         triggerBotTurnIfNeeded();
     }
 
@@ -317,6 +402,17 @@ public class GameController {
             } else if (from.toUpperCase().startsWith("H.")) {
                 // play from hand
                 int handIndex = Integer.parseInt(from.substring(2));
+
+                // DEBUG
+                Card cardToPlay = player.getHand().get(handIndex);
+                ServerView.log("DEBUG: Trying to play card: " + formatCard(cardToPlay));
+                ServerView.log("DEBUG: Card isSkipBo: " + cardToPlay.isSkipBo());
+                if (!cardToPlay.isSkipBo()) {
+                    ServerView.log("DEBUG: Card number: " + cardToPlay.getNumber());
+                }
+                ServerView.log("DEBUG: Pile expects: " + targetPile.getNextRequiredNumber());
+                ServerView.log("DEBUG: canPlay result: " + targetPile.canPlay(cardToPlay));
+
                 player.playFromHand(handIndex, targetPile);
             } else if (from.toUpperCase().startsWith("D.")) {
                 // play from discard
@@ -329,8 +425,9 @@ public class GameController {
             return "206"; // INVALID_MOVE
         }
 
-        // we broadcast the play
-        broadcast("PLAY~" + name + "~" + from + "~" + to);
+        // we broadcast the play with the new building pile top value
+        int newValue = targetPile.getCurrentValue();
+        broadcast("PLAY~" + name + "~" + from + "~" + to + "~" + newValue);
         ServerView.logMove(name, from, to);
 
         // we check for winner
@@ -364,29 +461,36 @@ public class GameController {
             return "205";
         }
 
-        // we need at least one card in hand to discard
         if (player.getHand().isEmpty()) {
             return "206";
         }
 
         // we discard the first card to first non-full discard pile
-        // (simple implementation - real game would let player choose)
         Card card = player.getHand().removeAt(0);
-        player.getDiscardPile(0).discard(card);
+        int discardIndex = 0; // for now, always discard to pile 0
+        player.getDiscardPile(discardIndex).discard(card);
+
+        // broadcast the discard action so clients can update their view
+        broadcast("DISCARD~" + name + "~" + formatCard(card) + "~" + discardIndex);
 
         // we go to next turn
         game.nextTurn();
 
         // we refill new player's hand
         Player nextPlayer = game.getCurrentPlayer();
-        nextPlayer.refillHand(game.getDrawPile());
+        if (!game.getDrawPile().isEmpty()) {
+            nextPlayer.refillHand(game.getDrawPile());
+        }
 
         // we broadcast turn change
         broadcast("TURN~" + nextPlayer.getName());
         ServerView.logTurn(nextPlayer.getName());
 
-        // we send updated hand to new player
+        // we send updated hand to the new current player
         sendPlayerHand(nextPlayer.getName());
+
+        // trigger bot turn if next player is a bot
+        triggerBotTurnIfNeeded();
 
         return null;
     }

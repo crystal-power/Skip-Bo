@@ -43,7 +43,42 @@ public class ServerMessageHandler {
             parseTable(msg.args());
             System.out.println("[SERVER] TABLE updated");
         } else if (cmd.equals("PLAY")) {
+            // Parse: PLAY~playerName~from~to~newBuildingValue
+            if (msg.args().length >= 3) {
+                String playerName = msg.args()[0];
+                String from = msg.args()[1];
+                String to = msg.args()[2];
+
+                // Update building pile if we have the new value
+                if (to.toUpperCase().startsWith("B.") && msg.args().length >= 4) {
+                    try {
+                        int pileIndex = Integer.parseInt(to.substring(2));
+                        String newValue = msg.args()[3];
+
+                        if (pileIndex >= 0 && pileIndex < 4) {
+                            if (newValue.equals("12")) {
+                                // Pile completed, will be cleared
+                                state.buildingTops[pileIndex] = "X";
+                            } else {
+                                state.buildingTops[pileIndex] = newValue;
+                            }
+                        }
+                    } catch (NumberFormatException e) {
+                        // ignore
+                    }
+                }
+            }
             System.out.println("[SERVER] " + msg.raw());
+        } else if (cmd.equals("DISCARD")) {
+        String playerName = msg.args()[0];
+        String card = msg.args()[1];
+        int pileIndex = Integer.parseInt(msg.args()[2]);
+
+        // Update the player's discard pile in our state
+        state.tablePlayers.putIfAbsent(playerName, new ClientState.PlayerView());
+        state.tablePlayers.get(playerName).discards[pileIndex] = card;
+
+        System.out.println("[SERVER] " + playerName + " discarded " + card + " to pile " + pileIndex);
         } else if (cmd.equals("ERROR")) {
             String code = msg.args()[0];
             String errorName = decodeError(code);
